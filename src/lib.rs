@@ -6,11 +6,6 @@ use serde_json;
 use urlencoding::encode;
 use scraper::{ElementRef, Html, Selector};
 
-fn url_encoder(url: &str) -> String {
-    let encoded = encode(url);
-    encoded.to_string()
-}
-
 #[derive(Deserialize, Debug, PartialEq, Serialize)]
 struct Styles {
     average: f32,
@@ -20,6 +15,16 @@ struct Styles {
 }
 
 impl Styles {
+    /// Creates a new Styles struct
+    ///
+    /// # Arguments
+    ///
+    /// * `average`:  f32 - The average time it takes to complete the game
+    /// * `median`:  f32 - The median time it takes to complete the game
+    /// * `rushed`:  f32 - The rushed time it takes to complete the game
+    /// * `leisure`:  f32 - The leisure time it takes to complete the game
+    ///
+    /// returns: Styles
     fn new(average: f32, median: f32, rushed: f32, leisure: f32) -> Styles {
         Styles {
             average,
@@ -41,6 +46,18 @@ struct Game {
 }
 
 impl Game {
+    /// Creates a new Game struct
+    ///
+    /// # Arguments
+    ///
+    /// * `title`:  String - The title of the game
+    /// * `hltb_id`:  u32 - The ID of the game on How Long to Beat
+    /// * `main_story`:  Styles - The time it takes to complete the main story
+    /// * `main_extra`:  Styles - The time it takes to complete the main story and extras
+    /// * `completionist`:  Styles - The time it takes to complete the game 100%
+    /// * `all_styles`:  Styles - The time it takes to complete the game in all styles
+    ///
+    /// returns: Game
     fn new(title: String, hltb_id: u32, main_story: Styles, main_extra: Styles, completionist: Styles, all_styles: Styles) -> Game {
         Game {
             hltb_id,
@@ -55,6 +72,13 @@ impl Game {
 
 const BASE_URL: &str = "https://howlongtobeat.com/";
 
+/// Searches the search page for a game
+///
+/// # Arguments
+///
+/// * `name`:  &str - The name of the game to search for
+///
+/// returns: Result<u32, Box<dyn Error, Global>>
 async fn search_search_page_for(name: &str) -> Result<u32, Box<dyn Error>> {
     let url = BASE_URL.to_owned() + "?q=" + &encode(name);
     let launch_options = LaunchOptions {
@@ -81,6 +105,13 @@ async fn search_search_page_for(name: &str) -> Result<u32, Box<dyn Error>> {
     Err("Element not found".into())
 }
 
+/// Searches for the details page of a game
+///
+/// # Arguments
+///
+/// * `hltb_id`:  u32 - The ID of the game on How Long to Beat
+///
+/// returns: Result<Game, Box<dyn Error, Global>>
 async fn search_details_page_for(hltb_id: u32) -> Result<Game, Box<dyn Error>> {
     let url = BASE_URL.to_owned() + "game/" + hltb_id.to_string().as_str();
     let launch_options = LaunchOptions {
@@ -110,6 +141,13 @@ async fn search_details_page_for(hltb_id: u32) -> Result<Game, Box<dyn Error>> {
     Ok(Game::new(title,hltb_id, main_story, main_extra, completionist, all_styles))
 }
 
+/// Parses a row of a table
+///
+/// # Arguments
+///
+/// * `row`:  ElementRef - The row to parse
+///
+/// returns: Styles
 fn parse_row(row: ElementRef) -> Styles {
     let selector = Selector::parse("td").unwrap();
     let mut cells = row.select(&selector);
@@ -122,8 +160,15 @@ fn parse_row(row: ElementRef) -> Styles {
     Styles::new(average, median, rushed, leisure)
 }
 
+/// Converts a string of hours and minutes to seconds
+///
+/// # Arguments
+///
+/// * `text`:  &str - The text to convert to seconds (e.g. "26h 21m")
+///
+/// returns: f32
 fn convert_hours_minutes_to_sec(text: &str) -> f32 {
-    let mut parts = text.split(" ");
+    let parts = text.split(" ");
     let mut total = 0.0;
     for part in parts {
         if part.contains("h") {
@@ -139,6 +184,13 @@ fn to_json(game: Game) -> String {
     serde_json::to_string(&game).unwrap()
 }
 
+/// Searches for a game by name
+///
+/// # Arguments
+///
+/// * `name`:  &str - The name of the game to search for
+///
+/// returns: Result<String, Box<dyn Error, Global>>
 pub async fn search_by_name(name: &str) -> Result<String, Box<dyn Error>> {
     let hltb_id = search_search_page_for(name).await.unwrap();
     let game = search_details_page_for(hltb_id).await.unwrap();
@@ -149,11 +201,6 @@ pub async fn search_by_name(name: &str) -> Result<String, Box<dyn Error>> {
 mod tests {
     use super::*;
     use tokio;
-
-    #[tokio::test]
-    async fn test_url_encoder() {
-        assert_eq!(url_encoder("The Legend of Zelda: Breath of the Wild"), "The%20Legend%20of%20Zelda%3A%20Breath%20of%20the%20Wild");
-    }
 
     #[tokio::test]
     async fn test_search_search_page_for() {
