@@ -1,13 +1,12 @@
+use headless_chrome::{Browser, LaunchOptions};
+use scraper::{ElementRef, Html, Selector};
 use serde::Deserialize;
 use serde::Serialize;
 use std::error::Error;
-use headless_chrome::{Browser, LaunchOptions};
-use serde_json;
 use urlencoding::encode;
-use scraper::{ElementRef, Html, Selector};
 
 #[derive(Deserialize, Debug, PartialEq, Serialize)]
-struct Styles {
+pub struct Styles {
     average: f32,
     median: f32,
     rushed: f32,
@@ -36,7 +35,7 @@ impl Styles {
 }
 
 #[derive(Deserialize, Debug, PartialEq, Serialize)]
-struct Game {
+pub struct Game {
     hltb_id: u32,
     title: String,
     main_story: Styles,
@@ -58,7 +57,14 @@ impl Game {
     /// * `all_styles`:  Styles - The time it takes to complete the game in all styles
     ///
     /// returns: Game
-    fn new(title: String, hltb_id: u32, main_story: Styles, main_extra: Styles, completionist: Styles, all_styles: Styles) -> Game {
+    fn new(
+        title: String,
+        hltb_id: u32,
+        main_story: Styles,
+        main_extra: Styles,
+        completionist: Styles,
+        all_styles: Styles,
+    ) -> Game {
         Game {
             hltb_id,
             title,
@@ -129,7 +135,14 @@ async fn search_details_page_for(hltb_id: u32) -> Result<Game, Box<dyn Error>> {
     let content = tab.get_content()?;
     let document = Html::parse_document(&content);
     let title_selector = Selector::parse("#__next > div > main > div:nth-child(1) > div > div > div > div.GameHeader_profile_header__q_PID.shadow_text").unwrap();
-    let title = document.select(&title_selector).next().unwrap().inner_html().trim().to_string().replace("<!-- -->", "");
+    let title = document
+        .select(&title_selector)
+        .next()
+        .unwrap()
+        .inner_html()
+        .trim()
+        .to_string()
+        .replace("<!-- -->", "");
     let table_selector = Selector::parse("#__next > div > main > div:nth-child(2) > div > div[class*='content_75_static'] > div.in.scrollable.scroll_blue.shadow_box.back_primary > table[class*='GameTimeTable_game_main_table']").unwrap();
     let table = document.select(&table_selector).next().unwrap();
     let tr_selector = Selector::parse("tbody > tr").unwrap();
@@ -138,7 +151,14 @@ async fn search_details_page_for(hltb_id: u32) -> Result<Game, Box<dyn Error>> {
     let main_extra = parse_row(rows.next().unwrap());
     let completionist = parse_row(rows.next().unwrap());
     let all_styles = parse_row(rows.next().unwrap());
-    Ok(Game::new(title,hltb_id, main_story, main_extra, completionist, all_styles))
+    Ok(Game::new(
+        title,
+        hltb_id,
+        main_story,
+        main_extra,
+        completionist,
+        all_styles,
+    ))
 }
 
 /// Parses a row of a table
@@ -180,10 +200,6 @@ fn convert_hours_minutes_to_sec(text: &str) -> f32 {
     total
 }
 
-fn to_json(game: Game) -> String {
-    serde_json::to_string(&game).unwrap()
-}
-
 /// Searches for a game by name
 ///
 /// # Arguments
@@ -191,10 +207,10 @@ fn to_json(game: Game) -> String {
 /// * `name`:  &str - The name of the game to search for
 ///
 /// returns: Result<String, Box<dyn Error, Global>>
-pub async fn search_by_name(name: &str) -> Result<String, Box<dyn Error>> {
+pub async fn search_by_name(name: &str) -> Result<Game, Box<dyn Error>> {
     let hltb_id = search_search_page_for(name).await.unwrap();
     let game = search_details_page_for(hltb_id).await.unwrap();
-    Ok(to_json(game))
+    Ok(game)
 }
 
 #[cfg(test)]
@@ -204,43 +220,86 @@ mod tests {
 
     #[tokio::test]
     async fn test_search_search_page_for() {
-        assert_eq!(search_search_page_for("Cyberpunk 2077").await.unwrap(), 2127);
+        assert_eq!(
+            search_search_page_for("Cyberpunk 2077").await.unwrap(),
+            2127
+        );
     }
 
     #[tokio::test]
     async fn test_search_details_page_for() {
         let game = search_details_page_for(2127).await.unwrap();
         assert_eq!(game.hltb_id, 2127);
-        assert_eq!(game.main_story, Styles::new(
-            convert_hours_minutes_to_sec("26h 21m"),
-            convert_hours_minutes_to_sec("24h 42m"),
-            convert_hours_minutes_to_sec("17h 45m"),
-            convert_hours_minutes_to_sec("42h 45m")
-        ));
-        assert_eq!(game.main_extra, Styles::new(
-            convert_hours_minutes_to_sec("64h 52m"),
-            convert_hours_minutes_to_sec("60h 0m"),
-            convert_hours_minutes_to_sec("37h 31m"),
-            convert_hours_minutes_to_sec("175h 13m")
-        ));
-        assert_eq!(game.completionist, Styles::new(
-            convert_hours_minutes_to_sec("110h 58m"),
-            convert_hours_minutes_to_sec("100h 35m"),
-            convert_hours_minutes_to_sec("75h 53m"),
-            convert_hours_minutes_to_sec("306h 23m")
-        ));
-        assert_eq!(game.all_styles, Styles::new(
-            convert_hours_minutes_to_sec("68h 23m"),
-            convert_hours_minutes_to_sec("60h 0m"),
-            convert_hours_minutes_to_sec("37h 5m"),
-            convert_hours_minutes_to_sec("285h 35m")
-        ));
+        assert_eq!(
+            game.main_story,
+            Styles::new(
+                convert_hours_minutes_to_sec("26h 21m"),
+                convert_hours_minutes_to_sec("24h 42m"),
+                convert_hours_minutes_to_sec("17h 45m"),
+                convert_hours_minutes_to_sec("42h 45m")
+            )
+        );
+        assert_eq!(
+            game.main_extra,
+            Styles::new(
+                convert_hours_minutes_to_sec("64h 52m"),
+                convert_hours_minutes_to_sec("60h 0m"),
+                convert_hours_minutes_to_sec("37h 31m"),
+                convert_hours_minutes_to_sec("175h 13m")
+            )
+        );
+        assert_eq!(
+            game.completionist,
+            Styles::new(
+                convert_hours_minutes_to_sec("110h 58m"),
+                convert_hours_minutes_to_sec("100h 35m"),
+                convert_hours_minutes_to_sec("75h 53m"),
+                convert_hours_minutes_to_sec("306h 23m")
+            )
+        );
+        assert_eq!(
+            game.all_styles,
+            Styles::new(
+                convert_hours_minutes_to_sec("68h 23m"),
+                convert_hours_minutes_to_sec("60h 0m"),
+                convert_hours_minutes_to_sec("37h 5m"),
+                convert_hours_minutes_to_sec("285h 35m")
+            )
+        );
         assert_eq!(game.title, "Cyberpunk 2077");
     }
 
     #[tokio::test]
     async fn test_search_by_name() {
         let game = search_by_name("Cyberpunk 2077").await.unwrap();
-        assert_eq!(game,  "{\"hltb_id\":2127,\"title\":\"Cyberpunk 2077\",\"main_story\":{\"average\":94860.0,\"median\":88920.0,\"rushed\":63900.0,\"leisure\":153900.0},\"main_extra\":{\"average\":233520.0,\"median\":216000.0,\"rushed\":135060.0,\"leisure\":630780.0},\"completionist\":{\"average\":399480.0,\"median\":362100.0,\"rushed\":273180.0,\"leisure\":1102980.0},\"all_styles\":{\"average\":246180.0,\"median\":216000.0,\"rushed\":133500.0,\"leisure\":1028100.0}}");
+        let expected = Game::new(
+            "Cyberpunk 2077".to_string(),
+            2127,
+            Styles::new(
+                convert_hours_minutes_to_sec("26h 21m"),
+                convert_hours_minutes_to_sec("24h 42m"),
+                convert_hours_minutes_to_sec("17h 45m"),
+                convert_hours_minutes_to_sec("42h 45m"),
+            ),
+            Styles::new(
+                convert_hours_minutes_to_sec("64h 52m"),
+                convert_hours_minutes_to_sec("60h 0m"),
+                convert_hours_minutes_to_sec("37h 31m"),
+                convert_hours_minutes_to_sec("175h 13m"),
+            ),
+            Styles::new(
+                convert_hours_minutes_to_sec("110h 58m"),
+                convert_hours_minutes_to_sec("100h 35m"),
+                convert_hours_minutes_to_sec("75h 53m"),
+                convert_hours_minutes_to_sec("306h 23m"),
+            ),
+            Styles::new(
+                convert_hours_minutes_to_sec("68h 23m"),
+                convert_hours_minutes_to_sec("60h 0m"),
+                convert_hours_minutes_to_sec("37h 5m"),
+                convert_hours_minutes_to_sec("285h 35m"),
+            ),
+        );
+        assert_eq!(game, expected);
     }
 }

@@ -1,0 +1,9 @@
+*.rs text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.xml text eol=lf
+*.conf text eol=lf
+*.lock text eol=lf
+.gitattributes text eol=lf
