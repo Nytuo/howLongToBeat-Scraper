@@ -7,14 +7,8 @@ description = "Simple api for https://howlongtobeat.com"
 homepage = "https://github.com/nytuo/howlongtobeat-scraper"
 repository = "https://github.com/nytuo/howlongtobeat-scraper"
 readme = "README.md"
-include = [
-    "src/**/*",
-    "Cargo.toml",
-    "README.md",
-]
-keywords = [
-    "howlongtobeat", "hltb"
-]
+include = ["src/**/*", "Cargo.toml", "README.md"]
+keywords = ["howlongtobeat", "hltb"]
 
 [dependencies]
 reqwest = { version = "0.12.11", features = ["blocking", "json"] }
@@ -22,7 +16,9 @@ tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 urlencoding = "2.1.3"
 scraper = "0.22.0"
-headless_chrome = "1.0.15"
+headless_chrome = { git = "https://github.com/rust-headless-chrome/rust-headless-chrome", features = [
+    "fetch",
+] }
 
 [profile.dev]
 opt-level = 0
