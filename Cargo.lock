@@ -663,7 +663,8 @@ checksum = "bf151400ff0baff5465007dd2f3e717f3fe502074ca563069ce3a6629d07b289"
 [[package]]
 name = "headless_chrome"
 version = "1.0.15"
-source = "git+https://github.com/rust-headless-chrome/rust-headless-chrome#d5d7240c608d36379f3f767dd9abf3f2520c8f95"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ff091d678f38868547c5ee26b5c4105a03ec2a2099463ebc48c4d5ccf239036"
 dependencies = [
  "anyhow",
  "auto_generate_cdp",
