@@ -220,84 +220,81 @@ mod tests {
 
     #[tokio::test]
     async fn test_search_search_page_for() {
-        assert_eq!(
-            search_search_page_for("Cyberpunk 2077").await.unwrap(),
-            2127
-        );
+        assert_eq!(search_search_page_for("Metal Gear").await.unwrap(), 5900);
     }
 
     #[tokio::test]
     async fn test_search_details_page_for() {
-        let game = search_details_page_for(2127).await.unwrap();
-        assert_eq!(game.hltb_id, 2127);
+        let game = search_details_page_for(5900).await.unwrap();
+        assert_eq!(game.hltb_id, 5900);
         assert_eq!(
             game.main_story,
             Styles::new(
-                convert_hours_minutes_to_sec("26h 21m"),
-                convert_hours_minutes_to_sec("24h 42m"),
-                convert_hours_minutes_to_sec("17h 45m"),
-                convert_hours_minutes_to_sec("42h 45m")
+                convert_hours_minutes_to_sec("4h 8m"),
+                convert_hours_minutes_to_sec("4h"),
+                convert_hours_minutes_to_sec("2h 45m"),
+                convert_hours_minutes_to_sec("7h 12m")
             )
         );
         assert_eq!(
             game.main_extra,
             Styles::new(
-                convert_hours_minutes_to_sec("64h 52m"),
-                convert_hours_minutes_to_sec("60h 0m"),
-                convert_hours_minutes_to_sec("37h 31m"),
-                convert_hours_minutes_to_sec("175h 13m")
+                convert_hours_minutes_to_sec("5h"),
+                convert_hours_minutes_to_sec("4h 55m"),
+                convert_hours_minutes_to_sec("3h 34m"),
+                convert_hours_minutes_to_sec("7h 31m")
             )
         );
         assert_eq!(
             game.completionist,
             Styles::new(
-                convert_hours_minutes_to_sec("110h 58m"),
-                convert_hours_minutes_to_sec("100h 35m"),
-                convert_hours_minutes_to_sec("75h 53m"),
-                convert_hours_minutes_to_sec("306h 23m")
+                convert_hours_minutes_to_sec("5h 25m"),
+                convert_hours_minutes_to_sec("5h"),
+                convert_hours_minutes_to_sec("4h 5m"),
+                convert_hours_minutes_to_sec("10h 36m")
             )
         );
         assert_eq!(
             game.all_styles,
             Styles::new(
-                convert_hours_minutes_to_sec("68h 23m"),
-                convert_hours_minutes_to_sec("60h 0m"),
-                convert_hours_minutes_to_sec("37h 5m"),
-                convert_hours_minutes_to_sec("285h 35m")
+                convert_hours_minutes_to_sec("4h 31m"),
+                convert_hours_minutes_to_sec("4h"),
+                convert_hours_minutes_to_sec("2h 51m"),
+                convert_hours_minutes_to_sec("10h 7m")
             )
         );
-        assert_eq!(game.title, "Cyberpunk 2077");
+        assert_eq!(game.title, "Metal Gear");
     }
 
     #[tokio::test]
     async fn test_search_by_name() {
-        let game = search_by_name("Cyberpunk 2077").await.unwrap();
+        let game = search_by_name("Metal Gear").await.unwrap();
         let expected = Game::new(
-            "Cyberpunk 2077".to_string(),
-            2127,
+            "Metal Gear".to_string(),
+            5900,
             Styles::new(
-                convert_hours_minutes_to_sec("26h 21m"),
-                convert_hours_minutes_to_sec("24h 42m"),
-                convert_hours_minutes_to_sec("17h 45m"),
-                convert_hours_minutes_to_sec("42h 45m"),
+                convert_hours_minutes_to_sec("4h 8m"),
+                convert_hours_minutes_to_sec("4h"),
+                convert_hours_minutes_to_sec("2h 45m"),
+                convert_hours_minutes_to_sec("7h 12m"),
             ),
             Styles::new(
-                convert_hours_minutes_to_sec("64h 52m"),
-                convert_hours_minutes_to_sec("60h 0m"),
-                convert_hours_minutes_to_sec("37h 31m"),
-                convert_hours_minutes_to_sec("175h 13m"),
+                convert_hours_minutes_to_sec("5h"),
+                convert_hours_minutes_to_sec("4h 55m"),
+                convert_hours_minutes_to_sec("3h 34m"),
+                convert_hours_minutes_to_sec("7h 31m"),
             ),
             Styles::new(
-                convert_hours_minutes_to_sec("110h 58m"),
-                convert_hours_minutes_to_sec("100h 35m"),
-                convert_hours_minutes_to_sec("75h 53m"),
-                convert_hours_minutes_to_sec("306h 23m"),
+                convert_hours_minutes_to_sec("5h 25m"),
+                convert_hours_minutes_to_sec("5h"),
+                convert_hours_minutes_to_sec("4h 5m"),
+                convert_hours_minutes_to_sec("10h 36m"),
             ),
             Styles::new(
-                convert_hours_minutes_to_sec("68h 23m"),
-                convert_hours_minutes_to_sec("60h 0m"),
-                convert_hours_minutes_to_sec("37h 5m"),
-                convert_hours_minutes_to_sec("285h 35m"),
+                convert_hours_minutes_to_sec("4h 31m"),
+                convert_hours_minutes_to_sec("4h"),
+                convert_hours_minutes_to_sec("2h 51m"),
+                convert_hours_minutes_to_sec("10h 7m"),
             ),
         );
         assert_eq!(game, expected);
