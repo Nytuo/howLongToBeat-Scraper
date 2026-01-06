@@ -20,6 +20,7 @@ scraper = "0.22.0"
 headless_chrome = { version = "1.0.20", features = [
     "fetch",
 ] }
+serde_json = "1"
 
 [profile.dev]
 opt-level = 0
