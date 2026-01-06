@@ -83,12 +83,17 @@ const BASE_URL: &str = "https://howlongtobeat.com/";
 /// # Arguments
 ///
 /// * `name`:  &str - The name of the game to search for
+/// * `sandbox`:  bool - Whether to enable sandbox mode for the browser
 ///
 /// returns: Result<u32, Box<dyn Error, Global>>
-async fn search_search_page_for(name: &str) -> Result<u32, Box<dyn Error>> {
+async fn search_search_page_for_with_sandbox(
+    name: &str,
+    sandbox: bool,
+) -> Result<u32, Box<dyn Error>> {
     let url = BASE_URL.to_owned() + "?q=" + &encode(name);
     let launch_options = LaunchOptions {
         headless: true,
+        sandbox,
         ..Default::default()
     };
     let browser = Browser::new(launch_options)?;
@@ -96,11 +101,11 @@ async fn search_search_page_for(name: &str) -> Result<u32, Box<dyn Error>> {
     tab.set_user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36", None, None)?;
     tab.navigate_to(&url)?;
     tab.wait_until_navigated()?;
-    tab.wait_for_element("#search-results-header > ul > li:nth-child(1) > div > div[class*='GameCard_search_list_image'] > a")?;
+    tab.wait_for_element("#search-results-header > ul > li:nth-child(1) > div > div[class*='_search_list_image'] > a")?;
 
     let content = tab.get_content()?;
     let document = Html::parse_document(&content);
-    let selector = Selector::parse("#search-results-header > ul > li:nth-child(1) > div > div[class*='GameCard_search_list_image'] > a").unwrap();
+    let selector = Selector::parse("#search-results-header > ul > li:nth-child(1) > div > div[class*='_search_list_image'] > a").unwrap();
 
     for element in document.select(&selector) {
         if let Some(link) = element.value().attr("href") {
@@ -111,17 +116,33 @@ async fn search_search_page_for(name: &str) -> Result<u32, Box<dyn Error>> {
     Err("Element not found".into())
 }
 
+/// Searches the search page for a game (with sandbox enabled by default)
+///
+/// # Arguments
+///
+/// * `name`:  &str - The name of the game to search for
+///
+/// returns: Result<u32, Box<dyn Error, Global>>
+async fn search_search_page_for(name: &str) -> Result<u32, Box<dyn Error>> {
+    search_search_page_for_with_sandbox(name, true).await
+}
+
 /// Searches for the details page of a game
 ///
 /// # Arguments
 ///
 /// * `hltb_id`:  u32 - The ID of the game on How Long to Beat
+/// * `sandbox`:  bool - Whether to enable sandbox mode for the browser
 ///
 /// returns: Result<Game, Box<dyn Error, Global>>
-async fn search_details_page_for(hltb_id: u32) -> Result<Game, Box<dyn Error>> {
+async fn search_details_page_for_with_sandbox(
+    hltb_id: u32,
+    sandbox: bool,
+) -> Result<Game, Box<dyn Error>> {
     let url = BASE_URL.to_owned() + "game/" + hltb_id.to_string().as_str();
     let launch_options = LaunchOptions {
         headless: true,
+        sandbox,
         ..Default::default()
     };
     let browser = Browser::new(launch_options)?;
@@ -130,11 +151,14 @@ async fn search_details_page_for(hltb_id: u32) -> Result<Game, Box<dyn Error>> {
     tab.navigate_to(&url)?;
     tab.wait_until_navigated()?;
 
-    tab.wait_for_element("#__next > div > main > div:nth-child(2) > div > div[class*='content_75_static'] > div.in.scrollable.scroll_blue.shadow_box.back_primary > table[class*='GameTimeTable_game_main_table']")?;
+    tab.wait_for_element("#__next > div > main > div:nth-child(2) > div > div[class*='content'] > div.in.scrollable.scroll_blue.shadow_box.back_primary > table[class*='_game_main_table']")?;
 
     let content = tab.get_content()?;
     let document = Html::parse_document(&content);
-    let title_selector = Selector::parse("#__next > div > main > div:nth-child(1) > div > div > div > div.GameHeader_profile_header__q_PID.shadow_text").unwrap();
+    let title_selector = Selector::parse(
+        "#__next > div > main > div:nth-child(1) > div > div > div > div[class*='_profile_header']",
+    )
+    .unwrap();
     let title = document
         .select(&title_selector)
         .next()
@@ -143,7 +167,7 @@ async fn search_details_page_for(hltb_id: u32) -> Result<Game, Box<dyn Error>> {
         .trim()
         .to_string()
         .replace("<!-- -->", "");
-    let table_selector = Selector::parse("#__next > div > main > div:nth-child(2) > div > div[class*='content_75_static'] > div.in.scrollable.scroll_blue.shadow_box.back_primary > table[class*='GameTimeTable_game_main_table']").unwrap();
+    let table_selector = Selector::parse("#__next > div > main > div:nth-child(2) > div > div[class*='content'] > div.in.scrollable.scroll_blue.shadow_box.back_primary > table[class*='_game_main_table']").unwrap();
     let table = document.select(&table_selector).next().unwrap();
     let tr_selector = Selector::parse("tbody > tr").unwrap();
     let mut rows = table.select(&tr_selector);
@@ -159,6 +183,17 @@ async fn search_details_page_for(hltb_id: u32) -> Result<Game, Box<dyn Error>> {
         completionist,
         all_styles,
     ))
+}
+
+/// Searches for the details page of a game (with sandbox enabled by default)
+///
+/// # Arguments
+///
+/// * `hltb_id`:  u32 - The ID of the game on How Long to Beat
+///
+/// returns: Result<Game, Box<dyn Error, Global>>
+async fn search_details_page_for(hltb_id: u32) -> Result<Game, Box<dyn Error>> {
+    search_details_page_for_with_sandbox(hltb_id, true).await
 }
 
 /// Parses a row of a table
@@ -208,8 +243,27 @@ fn convert_hours_minutes_to_sec(text: &str) -> f32 {
 ///
 /// returns: Result<String, Box<dyn Error, Global>>
 pub async fn search_by_name(name: &str) -> Result<Game, Box<dyn Error>> {
-    let hltb_id = search_search_page_for(name).await.unwrap();
-    let game = search_details_page_for(hltb_id).await.unwrap();
+    search_by_name_with_sandbox(name, true).await
+}
+
+/// Searches for a game by name with custom sandbox setting
+///
+/// # Arguments
+///
+/// * `name`:  &str - The name of the game to search for
+/// * `sandbox`:  bool - Whether to enable sandbox mode for the browser (set to false for Docker/CI environments)
+///
+/// returns: Result<String, Box<dyn Error, Global>>
+pub async fn search_by_name_with_sandbox(
+    name: &str,
+    sandbox: bool,
+) -> Result<Game, Box<dyn Error>> {
+    let hltb_id = search_search_page_for_with_sandbox(name, sandbox)
+        .await
+        .unwrap();
+    let game = search_details_page_for_with_sandbox(hltb_id, sandbox)
+        .await
+        .unwrap();
     Ok(game)
 }
 
@@ -230,37 +284,37 @@ mod tests {
         assert_eq!(
             game.main_story,
             Styles::new(
-                convert_hours_minutes_to_sec("4h 8m"),
+                convert_hours_minutes_to_sec("4h 10m"),
                 convert_hours_minutes_to_sec("4h"),
-                convert_hours_minutes_to_sec("2h 45m"),
+                convert_hours_minutes_to_sec("2h 46m"),
                 convert_hours_minutes_to_sec("7h 12m")
             )
         );
         assert_eq!(
             game.main_extra,
             Styles::new(
-                convert_hours_minutes_to_sec("5h"),
-                convert_hours_minutes_to_sec("4h 55m"),
-                convert_hours_minutes_to_sec("3h 34m"),
-                convert_hours_minutes_to_sec("7h 31m")
+                convert_hours_minutes_to_sec("4h 54m"),
+                convert_hours_minutes_to_sec("4h 51m"),
+                convert_hours_minutes_to_sec("3h 24m"),
+                convert_hours_minutes_to_sec("7h 29m")
             )
         );
         assert_eq!(
             game.completionist,
             Styles::new(
-                convert_hours_minutes_to_sec("5h 25m"),
+                convert_hours_minutes_to_sec("5h 41m"),
                 convert_hours_minutes_to_sec("5h"),
-                convert_hours_minutes_to_sec("4h 5m"),
-                convert_hours_minutes_to_sec("10h 36m")
+                convert_hours_minutes_to_sec("3h 58m"),
+                convert_hours_minutes_to_sec("14h 52m")
             )
         );
         assert_eq!(
             game.all_styles,
             Styles::new(
-                convert_hours_minutes_to_sec("4h 31m"),
+                convert_hours_minutes_to_sec("4h 34m"),
                 convert_hours_minutes_to_sec("4h"),
-                convert_hours_minutes_to_sec("2h 51m"),
-                convert_hours_minutes_to_sec("10h 7m")
+                convert_hours_minutes_to_sec("2h 52m"),
+                convert_hours_minutes_to_sec("14h 20m")
             )
         );
         assert_eq!(game.title, "Metal Gear");
@@ -273,30 +327,39 @@ mod tests {
             "Metal Gear".to_string(),
             5900,
             Styles::new(
-                convert_hours_minutes_to_sec("4h 8m"),
+                convert_hours_minutes_to_sec("4h 10m"),
                 convert_hours_minutes_to_sec("4h"),
-                convert_hours_minutes_to_sec("2h 45m"),
+                convert_hours_minutes_to_sec("2h 46m"),
                 convert_hours_minutes_to_sec("7h 12m"),
             ),
             Styles::new(
-                convert_hours_minutes_to_sec("5h"),
-                convert_hours_minutes_to_sec("4h 55m"),
-                convert_hours_minutes_to_sec("3h 34m"),
-                convert_hours_minutes_to_sec("7h 31m"),
+                convert_hours_minutes_to_sec("4h 54m"),
+                convert_hours_minutes_to_sec("4h 51m"),
+                convert_hours_minutes_to_sec("3h 24m"),
+                convert_hours_minutes_to_sec("7h 29m"),
             ),
             Styles::new(
-                convert_hours_minutes_to_sec("5h 25m"),
+                convert_hours_minutes_to_sec("5h 41m"),
                 convert_hours_minutes_to_sec("5h"),
-                convert_hours_minutes_to_sec("4h 5m"),
-                convert_hours_minutes_to_sec("10h 36m"),
+                convert_hours_minutes_to_sec("3h 58m"),
+                convert_hours_minutes_to_sec("14h 52m"),
             ),
             Styles::new(
-                convert_hours_minutes_to_sec("4h 31m"),
+                convert_hours_minutes_to_sec("4h 34m"),
                 convert_hours_minutes_to_sec("4h"),
-                convert_hours_minutes_to_sec("2h 51m"),
-                convert_hours_minutes_to_sec("10h 7m"),
+                convert_hours_minutes_to_sec("2h 52m"),
+                convert_hours_minutes_to_sec("14h 20m"),
             ),
         );
         assert_eq!(game, expected);
+    }
+
+    #[tokio::test]
+    async fn test_search_by_name_with_sandbox_disabled() {
+        let game = search_by_name_with_sandbox("Metal Gear", false)
+            .await
+            .unwrap();
+        assert_eq!(game.hltb_id, 5900);
+        assert_eq!(game.title, "Metal Gear");
     }
 }
